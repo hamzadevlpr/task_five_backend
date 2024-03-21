@@ -48,8 +48,8 @@ app.get('/:userId', (req, res) => {
 );
 
 app.post('/add', (req, res) => {
-    const { name, email, phone, dob, hobby, street, country, city, state, postCode } = req.body;
-    const user = { name, email, phone, dob, hobby, street, country, city, state, postCode };
+    const { id, name, email, phone, dob, hobby, street, country, city, state, postCode } = req.body;
+    const user = { id, name, email, phone, dob, hobby, street, country, city, state, postCode };
     connector.query('INSERT INTO users SET ?', user, (err, result) => {
         if (err) {
             console.error('Error inserting user:', err);
