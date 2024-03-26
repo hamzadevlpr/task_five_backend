@@ -38,6 +38,43 @@ app.get('/', (req, res) => {
     });
 });
 
+app.post('/signup', (req, res) => {
+    const { email, password } = req.body;
+    const user = { email, password };
+
+    connector.query('SELECT * FROM user WHERE email = ?', email, (err, rows) => {
+        if (err) {
+            console.error('Error checking for user:', err);
+            return res.status(500).send('Error checking for user');
+        }
+        if (rows.length > 0) {
+            return res.status(400).send('Email already exists');
+        }
+
+        connector.query('INSERT INTO user SET ?', user, (err, result) => {
+            if (err) {
+                return res.status(500).send('Error adding user');
+            }
+            res.status(200).send({ message: 'User signed up successfully', user });
+        });
+    });
+});
+
+app.post('/signin', (req, res) => {
+    const { email, password } = req.body;
+    connector.query('SELECT * FROM user WHERE email = ? AND password = ?', [email, password], (err, rows) => {
+        if (err) {
+            return res.status(500).send('Error checking for user');
+        }
+        if (rows.length === 0) {
+            return res.status(400).send(`User doesn't exist or password is incorrect`);
+        }
+        res.status(200).send({ message: 'User logged in successfully', user: rows[0] });
+    });
+});
+
+
+
 app.get('/:userId', (req, res) => {
     const userId = req.params.userId;
     connector.query('SELECT * FROM users WHERE id = ?', userId, (err, rows) => {
@@ -53,7 +90,6 @@ app.post('/add', (req, res) => {
 
     connector.query('INSERT INTO users SET ?', user, (err, result) => {
         if (err) {
-            console.error('Error inserting user:', err);
             res.status(500).send('Error adding user');
             return;
         }
@@ -68,7 +104,6 @@ app.put('/update/:userId', (req, res) => {
     const updatedUser = { name, email, phone, dob, hobby, street, country, city, state, postCode };
     connector.query('UPDATE users SET ? WHERE id = ?', [updatedUser, userId], (err, result) => {
         if (err) {
-            console.error('Error updating user:', err);
             res.status(500).send('Error updating user');
             return;
         }
@@ -80,7 +115,6 @@ app.delete('/delete/:userId', (req, res) => {
     const userId = req.params.userId;
     connector.query('DELETE FROM users WHERE id = ?', userId, (err, result) => {
         if (err) {
-            console.error('Error deleting user:', err);
             res.status(500).send('Error deleting user');
             return;
         }
