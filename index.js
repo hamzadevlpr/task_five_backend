@@ -171,7 +171,7 @@ app.post('/forget', async (req, res) => {
             to: email,
             subject: "Password Reset ✔",
             text: "Hello, Please click the following link to reset your password: [Reset Link]",
-            html: `<b>Hello,</b><p>Please click the following link to reset your password: <a href='http://localhost:5173/new-password/${token}'>Reset Link</a></p>`,
+            html: `<b>Hello,</b><p>Please click the following link to reset your password: <a href='http://localhost:5173/new-password/${token}' class="inline-flex w-full items-center justify-center rounded-md px-3.5 py-2.5 font-semibold leading-7 text-gray-600 bg-gray-200 hover:bg-gray-300">Reset Link</a></p>`,
         });
 
         console.log("Message sent: %s", info.messageId);
@@ -185,7 +185,7 @@ app.post('/forget', async (req, res) => {
 
 app.post('/new-password/:token', async (req, res) => {
     // get token from params 
-    const { token } = req.params; 
+    const { token } = req.params;
     const { newPassword } = req.body;
     try {
         const payload = jwt.verify(token, secrets);
