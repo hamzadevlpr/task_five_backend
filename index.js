@@ -7,6 +7,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 app.use(cors());
 const nodemailer = require("nodemailer");
+const jwt = require('jsonwebtoken');
 
 const server = http.createServer(app);
 
@@ -137,11 +138,13 @@ const transporter = nodemailer.createTransport({
     port: 587,
     secure: false,
     auth: {
-        user: "hamzamalikllc@gmail.com",
-        pass: "wclshmisdrkvybpp",
+        user: 'hamzamalikllc@gmail.com',
+        pass: 'wclshmisdrkvybpp',
     },
+    authMethod: "PLAIN"
 });
 
+const secrets = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ";
 app.post('/forget', async (req, res) => {
     const { email } = req.body;
 
@@ -161,15 +164,18 @@ app.post('/forget', async (req, res) => {
             return;
         }
 
+        const token = jwt.sign({ email }, secrets, { expiresIn: '1d' });
+
         const info = await transporter.sendMail({
-            from: '"Muhammad Hamza Malik" <hamzamalikllc@gmail.com>',
-            to: email, 
+            from: `Muhammad Hamza Malik <hamzamalikllc@gmail.com>`,
+            to: email,
             subject: "Password Reset ✔",
             text: "Hello, Please click the following link to reset your password: [Reset Link]",
-            html: "<b>Hello,</b><p>Please click the following link to reset your password: <a href='#'>Reset Link</a></p>",
+            html: `<b>Hello,</b><p>Please click the following link to reset your password: <a href='http://localhost:5173/new-password/${token}'>Reset Link</a></p>`,
         });
 
         console.log("Message sent: %s", info.messageId);
+
         res.json({ message: 'Reset password link has been sent to your email' });
     } catch (err) {
         console.error('Error sending email:', err);
@@ -177,6 +183,27 @@ app.post('/forget', async (req, res) => {
     }
 });
 
+app.post('/new-password/:token', async (req, res) => {
+    // get token from params 
+    const { token } = req.params; 
+    const { newPassword } = req.body;
+    try {
+        const payload = jwt.verify(token, secrets);
+        const { email } = payload;
+
+        connector.query('UPDATE user SET password = ? WHERE email = ?', [newPassword, email], (err, results) => {
+            if (err) {
+                res.status(500).json({ error: 'Failed to update password' });
+                return;
+            }
+            res.json({ message: 'Password updated successfully' });
+        });
+
+    } catch (err) {
+        console.error('JWT verification error:', err);
+        res.status(400).json({ error: 'Invalid or expired token' });
+    }
+});
 
 io.on('connection', (socket) => {
     console.log('a user connected', socket.id);
