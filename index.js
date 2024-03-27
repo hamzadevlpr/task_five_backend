@@ -6,6 +6,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 app.use(cors());
+const nodemailer = require("nodemailer");
 
 const server = http.createServer(app);
 
@@ -85,8 +86,9 @@ app.get('/:userId', (req, res) => {
 );
 
 app.post('/add', (req, res) => {
-    const { id, name, email, phone, dob, hobby, street, country, city, state, postCode } = req.body;
-    const user = { id, name, email, phone, dob, hobby, street, country, city, state, postCode };
+    const { id, name, email, phone, dob, hobby, street, country, city, state, postCode, userId } = req.body;
+    console.log(req.body)
+    const user = { id, name, email, phone, dob, hobby, street, country, city, state, postCode, userId };
 
     connector.query('INSERT INTO users SET ?', user, (err, result) => {
         if (err) {
@@ -97,6 +99,14 @@ app.post('/add', (req, res) => {
     });
 });
 
+// get user data based on user id 
+app.get('/user/:userId', (req, res) => {
+    const userId = req.params.userId;
+    connector.query('SELECT * FROM users WHERE userId = ?', userId, (err, rows) => {
+        if (err) throw err;
+        res.send(rows);
+    });
+});
 
 app.put('/update/:userId', (req, res) => {
     const userId = req.params.userId;
@@ -122,6 +132,50 @@ app.delete('/delete/:userId', (req, res) => {
     });
 });
 
+const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: "hamzamalikllc@gmail.com",
+        pass: "wclshmisdrkvybpp",
+    },
+});
+
+app.post('/forget', async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const results = await new Promise((resolve, reject) => {
+            connector.query('SELECT * FROM user WHERE email = ?', email, (err, results) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(results);
+            });
+        });
+
+        if (results.length === 0) {
+            res.status(404).json({ error: 'Email not found' });
+            return;
+        }
+
+        const info = await transporter.sendMail({
+            from: '"Muhammad Hamza Malik" <hamzamalikllc@gmail.com>',
+            to: email, 
+            subject: "Password Reset ✔",
+            text: "Hello, Please click the following link to reset your password: [Reset Link]",
+            html: "<b>Hello,</b><p>Please click the following link to reset your password: <a href='#'>Reset Link</a></p>",
+        });
+
+        console.log("Message sent: %s", info.messageId);
+        res.json({ message: 'Reset password link has been sent to your email' });
+    } catch (err) {
+        console.error('Error sending email:', err);
+        res.status(500).json({ error: 'Failed to send reset password email' });
+    }
+});
 
 
 io.on('connection', (socket) => {
