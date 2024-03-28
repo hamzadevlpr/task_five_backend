@@ -8,7 +8,7 @@ const { Server } = require('socket.io');
 app.use(cors());
 const nodemailer = require("nodemailer");
 const jwt = require('jsonwebtoken');
-
+const bcrypt = require('bcrypt');
 const server = http.createServer(app);
 
 const io = new Server(server, {
@@ -41,8 +41,10 @@ app.get('/', (req, res) => {
 });
 
 app.post('/signup', (req, res) => {
-    const { email, password } = req.body;
+    var { email, password } = req.body;
+    password = bcrypt.hashSync(password, 10);
     const user = { email, password };
+    console.log(user)
 
     connector.query('SELECT * FROM user WHERE email = ?', email, (err, rows) => {
         if (err) {
@@ -63,19 +65,22 @@ app.post('/signup', (req, res) => {
 });
 
 app.post('/signin', (req, res) => {
-    const { email, password } = req.body;
-    connector.query('SELECT * FROM user WHERE email = ? AND password = ?', [email, password], (err, rows) => {
+    var { email, password } = req.body;
+    connector.query('SELECT * FROM user WHERE email = ?', [email], (err, rows) => {
         if (err) {
             return res.status(500).send('Error checking for user');
         }
         if (rows.length === 0) {
             return res.status(400).send(`User doesn't exist or password is incorrect`);
         }
+        const hashedPassword = rows[0].password;
+        const passwordMatch = bcrypt.compareSync(password, hashedPassword);
+        if (!passwordMatch) {
+            return res.status(400).send(`User doesn't exist or password is incorrect`);
+        }
         res.status(200).send({ message: 'User logged in successfully', user: rows[0] });
     });
 });
-
-
 
 app.get('/:userId', (req, res) => {
     const userId = req.params.userId;
