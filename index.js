@@ -171,6 +171,8 @@ app.post('/forget', async (req, res) => {
 
         const token = jwt.sign({ email }, secrets, { expiresIn: '1d' });
 
+
+        // email templete
         const info = await transporter.sendMail({
             from: `Muhammad Hamza Malik <hamzamalikllc@gmail.com>`,
             to: email,
